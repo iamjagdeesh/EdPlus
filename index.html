@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<title>EdPlus Stock Demo</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script src="https://www.gstatic.com/charts/loader.js"></script>
+	<script type="text/javascript">
+		var dataForChart = null;
+		
+		$(document).ready(function(){
+			$("#addSymbol").click(function(){
+				var symbol = document.getElementById("symbol").value;
+				$.get("https://api.iextrading.com/1.0/ref-data/symbols", function(data, status){
+					//alert("Data: " + data + "\nStatus: " + status);
+					var jsonData = data;
+					for (var i = 0; i < jsonData.length; i++) {
+						var symbolDetail = jsonData[i];
+						if (symbol.toUpperCase() == symbolDetail.symbol) {
+							//console.log(symbolDetail.name);
+							var list = document.getElementById('symbolList');
+							var entry = document.createElement('li');
+							entry.className = "list-group-item";
+							entry.appendChild(document.createTextNode(symbolDetail.symbol));
+							list.appendChild(entry);
+							charting(symbolDetail.symbol);
+							break;
+						}
+					}
+				});
+			});
+		});
+		
+		function getPricesIntoList() 
+		{
+			var list = document.getElementById('symbolList');
+			for (var i=1; i<list.childNodes.length; i++) 
+			{
+				var symbol = list.childNodes[i].innerText;
+				var price;
+				var url = "https://api.iextrading.com/1.0/stock/";
+				var lastPartOfUrl = "/price";
+				url = url.concat(symbol,lastPartOfUrl);
+				$.get(url, function(data, status){
+					alert("Data: " + data + "\nStatus: " + status);
+					var list = document.getElementById('priceList');
+					var entry = document.createElement('li');
+					entry.className = "list-group-item";
+					entry.appendChild(document.createTextNode(symbol.concat(",",data)));
+					list.appendChild(entry);
+					charting(symbol);
+				});
+			}
+			var list1 = document.getElementById('priceList');
+			console.log(list1.childNodes[1].innerText);
+		}
+		
+		function drawBasic(symbol, price) 
+		{	
+			if (dataForChart == null) {
+				dataForChart = new google.visualization.DataTable();
+				dataForChart.addColumn('string', 'Stock');
+				dataForChart.addColumn('number', 'Price');
+			}
+			dataForChart.addRow([symbol, price]);	
+
+			var options = {
+			title: 'Stock prices',
+			chartArea: {width: '50%'},
+			hAxis: {
+			  title: 'Price',
+			  minValue: 0
+			},
+			vAxis: {
+			}
+			};
+
+			var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+
+			chart.draw(dataForChart, options);
+		}
+		
+		function charting(symbol) {
+			console.log(symbol);
+			$.get("https://api.iextrading.com/1.0/stock/"+symbol+"/price", function(data, status){
+				console.log("Price of "+symbol+" : "+data);
+				google.charts.load('current', {packages: ['corechart', 'bar']});
+				google.charts.setOnLoadCallback(function(){
+					drawBasic(symbol, data);
+				});
+			});
+		}
+		
+	</script>
+	</head>
+	<body>
+		<div class="container">
+			<h2>EdPlus Stock Demo</h2>
+			<form onsubmit="getSymbols()">
+			<div class="form-group">
+				<input type="text" class="form-control" id="symbol" placeholder="Stock Symbol" name="symbol" required=true>
+			</div>
+			<button type="button" id="addSymbol" class="btn btn-default">Add</button>
+			</form>
+			</br>
+			<ul class="list-group" id="symbolList">
+			</ul>
+			</br>
+			<ul class="list-group" id="priceList" style="display:none;">
+			</ul>
+			<div id="chart_div"></div>
+		</div>
+	</body>
+</html>
